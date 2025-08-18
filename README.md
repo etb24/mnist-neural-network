@@ -1,5 +1,5 @@
 clone repo
 
-run python main.py
+run python3 main.py
 
-run python gui.py
+run python3 gui.py or python live-gui.py

@@ -24,14 +24,9 @@ def batch_loader(X, y=None, batch_size=512, shuffle=True):
 
 # activations and loss
 class LeakyReLU:
-    def __init__(self, alpha=0.2):
-        self.alpha = alpha
-
-    def __call__(self, x):
-        return np.where(x >= 0, x, self.alpha * x)
-    
-    def gradient(self, x):
-        return np.where(x >= 0, 1.0, self.alpha)
+    def __init__(self, alpha=0.2): self.alpha = alpha
+    def __call__(self, x): return np.where(x >= 0, x, self.alpha * x)
+    def gradient(self, x): return np.where(x >= 0, 1.0, self.alpha)
 
 class Softmax:
     def __call__(self, x):
@@ -63,6 +58,7 @@ class Activation:
 # linear layer with Adam optimizer
 class Linear:
     def __init__(self, n_in, n_out, name="linear"):
+        # He-uniform with LeakyReLU gain
         alpha = 0.2
         gain = np.sqrt(2.0 / (1 + alpha**2))
         limit = gain * np.sqrt(6.0 / n_in)
@@ -81,29 +77,29 @@ class Linear:
         self.output = np.dot(self.input, self.W) + self.b
         return self.output
 
-    def backward(self, output_error, lr=1e-3, weight_decay=1e-4, beta1=0.9, beta2=0.999, eps=1e-8, **kwargs):
+    def backward(self, output_error, lr=1e-3, weight_decay=1e-4,
+                 beta1=0.9, beta2=0.999, eps=1e-8, **kwargs):
         self.t += 1
-        # grads
+        # grads + L2
         dW = np.dot(self.input.T, output_error) + weight_decay * self.W
         db = np.mean(output_error, axis=0, keepdims=True)
 
-        # Adam update for W
+        # Adam for W
         self.mW = beta1 * self.mW + (1 - beta1) * dW
         self.vW = beta2 * self.vW + (1 - beta2) * (dW * dW)
         mWhat = self.mW / (1 - beta1 ** self.t)
         vWhat = self.vW / (1 - beta2 ** self.t)
         self.W -= lr * mWhat / (np.sqrt(vWhat) + eps)
 
-        # Adam update for b
+        # Adam for b
         self.mb = beta1 * self.mb + (1 - beta1) * db
         self.vb = beta2 * self.vb + (1 - beta2) * (db * db)
         mbhat = self.mb / (1 - beta1 ** self.t)
         vbhat = self.vb / (1 - beta2 ** self.t)
         self.b -= lr * mbhat / (np.sqrt(vbhat) + eps)
 
-        # backprop to previous layer
-        input_error = np.dot(output_error, self.W.T)
-        return input_error
+        # backprop
+        return np.dot(output_error, self.W.T)
 
     def __call__(self, x): return self.forward(x)
 
@@ -162,7 +158,7 @@ def main():
         X, y, test_size=10000, stratify=y, random_state=42
     )
 
-    # standardize per-pixel
+    # standardize per-pixel (fit on train only)
     mu = X_train.mean(axis=0, keepdims=True)
     sigma = X_train.std(axis=0, keepdims=True) + 1e-8
     X_train = (X_train - mu) / sigma
@@ -182,10 +178,10 @@ def main():
             out = model(xb)
             losses.append(np.mean(criterion.loss(yb, out)))
             accs.append(accuracy(np.argmax(yb, 1), np.argmax(out, 1)))
-            error = (out - yb) / xb.shape[0]
+            error = (out - yb) / xb.shape[0]  # softmax+CE gradient wrt logits
             model.backward(error)
 
-        # mild LR decay after the model settles
+        # mild LR decay
         if epoch in {15, 20}:
             model.lr *= 0.5
 
@@ -197,14 +193,17 @@ def main():
     test_acc = accuracy(np.argmax(y_test, 1), np.argmax(out_test, 1))
     print(f"Test accuracy: {test_acc:.4f}")
 
-    save_model(model, "mnist_weights.npz")
-    print("Saved weights to mnist_weights.npz")
+    save_model(model, mu, sigma, "mnist_weights.npz")
+    print("Saved weights (and mu/sigma) to mnist_weights.npz")
 
-# save/load model for use
-def save_model(model, path="mnist_weights.npz"):
+# save/load
+def save_model(model, mu, sigma, path="mnist_weights.npz"):
     layers = [l for l in model.layers if isinstance(l, Linear)]
-    np.savez(path, **{f"W{i}": L.W for i, L in enumerate(layers)},
-                   **{f"b{i}": L.b for i, L in enumerate(layers)})
+    np.savez(path,
+             mu=mu.astype(np.float32),
+             sigma=sigma.astype(np.float32),
+             **{f"W{i}": L.W for i, L in enumerate(layers)},
+             **{f"b{i}": L.b for i, L in enumerate(layers)})
 
 def load_model_into(model, path="mnist_weights.npz"):
     data = np.load(path)
