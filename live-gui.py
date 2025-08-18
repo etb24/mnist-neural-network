@@ -121,7 +121,7 @@ class MnistCanvasApp:
         for t in np.linspace(0.0, 1.0, steps+1):
             self._paint(u0 + t*du, v0 + t*dv)
 
-    # ----- mouse handlers -----
+    # mouse handlers
     def _down(self, e):
         u, v = e.x / self.scale, e.y / self.scale
         self._paint(u, v)
@@ -140,14 +140,14 @@ class MnistCanvasApp:
     def _up(self, _):
         self.last_u = self.last_v = None
 
-    # ----- rendering -----
+    # rendering
     def _render(self):
         img = Image.fromarray((self.buf * 255.0).astype(np.uint8))
         zoom = img.resize((self.W*self.scale, self.H*self.scale), Image.NEAREST)
         self.tkimg = ImageTk.PhotoImage(zoom)
         self.canvas.create_image(0, 0, image=self.tkimg, anchor="nw")
 
-    # ----- prediction pipeline -----
+    # prediction pipeline
     def _prep_input(self):
         # copy buffer (0..1, white-on-black)
         arr = self.buf.copy()
