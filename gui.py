@@ -116,7 +116,7 @@ class MnistCanvasApp:
 
     # rendering
     def _render(self):
-        img = Image.fromarray((self.buf * 255.0).astype(np.uint8), mode="L")
+        img = Image.fromarray((self.buf * 255.0).astype(np.uint8))
         zoom = img.resize((self.W*self.scale, self.H*self.scale), Image.NEAREST)
         self.tkimg = ImageTk.PhotoImage(zoom)  # keep ref!
         self.canvas.create_image(0, 0, image=self.tkimg, anchor="nw")
