@@ -93,7 +93,7 @@ class MnistCanvasApp:
     # brush and drawing
     def _gaussian_kernel(self, sigma=0.9):
         sigma = float(sigma)
-        radius = max(1, int(np.ceil(3*sigma)))  # ~3σ
+        radius = max(1, int(np.ceil(3*sigma)))
         ax = np.arange(-radius, radius+1, dtype=np.float32)
         xx, yy = np.meshgrid(ax, ax)
         ker = np.exp(-(xx**2 + yy**2) / (2.0 * sigma**2)).astype(np.float32)
@@ -192,10 +192,10 @@ class MnistCanvasApp:
         # find top class for highlighting
         top = int(np.argmax(p))
         for d in range(10):
-            val = float(p[d])
+            val = round(float(p[d]), 2)
             self.prog_vars[d].set(val)
-            self.perc_labels[d].config(text=f"{int(round(val*100))}%")
-            # bold the top class label; others normal
+            self.perc_labels[d].config(text=f"{val}")
+            # bold the top class label
             self.digit_labels[d].config(font=("Segoe UI", 10, "bold" if d == top else "normal"))
 
     def clear(self):
