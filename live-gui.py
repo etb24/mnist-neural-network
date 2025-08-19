@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import numpy as np
 from PIL import Image, ImageTk
@@ -19,7 +18,7 @@ class MnistCanvasApp:
 
         # MNIST-like brush (Gaussian stamp)
         self.base_sigma = 0.6 # width
-        self.kernel = self._gaussian_kernel(self.base_sigma)  # auto radius
+        self.kernel = self._gaussian_kernel(self.base_sigma)
         self.step_px = 0.2 
 
         # layout: canvas (left), sidebar (right)
@@ -36,16 +35,14 @@ class MnistCanvasApp:
         btns = tk.Frame(root)
         btns.grid(row=1, column=0, padx=10, pady=(0,10), sticky="ew")
         btns.columnconfigure(0, weight=1)
-        tk.Button(btns, text="Clear", command=self.clear)\
-            .grid(row=0, column=0, padx=5, sticky="ew")
+        tk.Button(btns, text="Clear", command=self.clear).grid(row=0, column=0, padx=5, sticky="ew")
 
         # confidence bars (0–9)
-        tk.Label(sidebar, text="Confidences", font=("Segoe UI", 12, "bold"))\
-            .grid(row=0, column=0, columnspan=3, sticky="w", pady=(0,5))
+        tk.Label(sidebar, text="Confidences", font=("Segoe UI", 12, "bold")).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0,5))
 
         self.digit_labels = []
         self.prog_vars = []
-        self.perc_labels = []
+        self.conf_labels = []
 
         for d in range(10):
             dlbl = tk.Label(sidebar, text=str(d))
@@ -58,7 +55,7 @@ class MnistCanvasApp:
 
             self.digit_labels.append(dlbl)
             self.prog_vars.append(var)
-            self.perc_labels.append(pct)
+            self.conf_labels.append(pct)
 
         # final prediction label
         self.pred_lbl = tk.Label(sidebar, text="Prediction: —", font=("Segoe UI", 14))
@@ -152,7 +149,7 @@ class MnistCanvasApp:
         # copy buffer (0..1, white-on-black)
         arr = self.buf.copy()
 
-        # center mass to the middle (MNIST-like centering)
+        # center mass to the middle
         m = float(arr.sum())
         if m > 1e-6:
             ys, xs = np.indices(arr.shape, dtype=np.float32)
@@ -187,14 +184,14 @@ class MnistCanvasApp:
     def _update_bars(self, probs):
         # normalize defensively
         s = float(np.sum(probs))
-        p = probs if s == 0 else probs / s
+        c = probs if s == 0 else probs / s
 
         # find top class for highlighting
-        top = int(np.argmax(p))
+        top = int(np.argmax(c))
         for d in range(10):
-            val = round(float(p[d]), 2)
+            val = round(float(c[d]), 2)
             self.prog_vars[d].set(val)
-            self.perc_labels[d].config(text=f"{val}")
+            self.conf_labels[d].config(text=f"{val}")
             # bold the top class label
             self.digit_labels[d].config(font=("Segoe UI", 10, "bold" if d == top else "normal"))
 
